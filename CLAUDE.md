@@ -63,3 +63,37 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 ---
 
 **These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
+
+## Project Context
+
+### Profile
+- **Name:** Ted (GitHub: zlvnt)
+- **Role:** AI Engineer, Bandung, Indonesia
+- **Existing Projects:** z3-Agent (Telegram AI customer service), RAG Observatory (82.8% precision, 20+ experiments), Agentic RAG (+34% quality improvement)
+
+### Communication
+- Diskusi dan penjelasan dalam **Bahasa Indonesia**
+- Gaya komunikasi casual
+
+---
+
+## Project: Health Intelligence Agent
+
+### Overview
+Production-grade agentic AI system untuk health & wellness. Bukan chatbot — sistem yang autonomous, proaktif, dan bisa plan → act → observe → adjust secara mandiri.
+
+### Core Technical Challenges
+- Agent orchestration architecture
+- Multi-step reasoning + tool use loops
+- Persistent memory & behavioral state
+- Feedback loops untuk behavior adaptation
+- Evaluation framework — bukan cuma output quality, tapi real-world behavior change
+
+### Tech Stack
+Python, FastAPI, LangChain, FAISS, sentence-transformers, Docker, PostgreSQL
+
+### Notes
+- Ted belum familiar LangGraph — ini kesempatan buat explore
+- Selalu mulai dari arsitektur dan diskusi dulu sebelum langsung coding
+- Project ini buat portfolio — harus ada metrics yang bisa diukur
+- Ikuti Karpathy guidelines di atas ketat-ketat
