@@ -1,3 +1,7 @@
 .venv
 .teds
 CLAUDE.md
+.env
+.claude/
+__pycache__/
+*.pyc
