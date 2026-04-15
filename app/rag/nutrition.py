@@ -1,4 +1,3 @@
-from langchain_core.tools import tool
 from langchain_qdrant import QdrantVectorStore
 from langchain_community.embeddings import FastEmbedEmbeddings
 from langchain.tools.retriever import create_retriever_tool

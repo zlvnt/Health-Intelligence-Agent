@@ -26,8 +26,13 @@ def create_bot(agent) -> Application:
             config=config,
         )
 
-        response = result["messages"][-1].content
-        await update.message.reply_text(response)
+        # Extract last AI message (skip internal handoff messages)
+        response = ""
+        for msg in reversed(result["messages"]):
+            if hasattr(msg, "type") and msg.type == "ai" and msg.content:
+                response = msg.content
+                break
+        await update.message.reply_text(response or "Sorry, I couldn't process that.")
 
     app.add_handler(CommandHandler("start", handle_start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))

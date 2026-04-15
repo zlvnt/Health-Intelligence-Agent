@@ -3,6 +3,8 @@ from langchain_core.tools import tool
 from app.db import queries
 
 
+# --- Tracking Agent Tools (existing) ---
+
 @tool
 async def log_meal(
     telegram_id: int,
@@ -66,3 +68,32 @@ async def set_calorie_goal(telegram_id: int, daily_calories: float) -> str:
     """Set or update the user's daily calorie goal."""
     await queries.set_calorie_goal(telegram_id, daily_calories)
     return f"Daily calorie goal set to {daily_calories:.0f} kcal."
+
+
+# --- Assessment Agent Tools (placeholder) ---
+
+@tool
+async def collect_health_data(telegram_id: int, data_type: str, value: str) -> str:
+    """Store a piece of health/lifestyle data collected from the user.
+    data_type examples: 'age', 'weight', 'height', 'activity_level', 'dietary_preference', 'health_goal'
+    """
+    # TODO: persist to user profile in DB
+    return f"Stored {data_type}: {value} for user {telegram_id}"
+
+
+# --- Planning Agent Tools (placeholder) ---
+
+@tool
+async def create_health_plan(telegram_id: int, plan_summary: str) -> str:
+    """Create and store a structured health plan for the user."""
+    # TODO: persist plan to DB
+    return f"Health plan created for user {telegram_id}: {plan_summary}"
+
+
+# --- Intervention Agent Tools (placeholder) ---
+
+@tool
+async def suggest_adjustment(telegram_id: int, issue: str, suggestion: str) -> str:
+    """Suggest an adjustment to the user's health plan based on adherence issues."""
+    # TODO: persist adjustment to DB
+    return f"Adjustment suggested for '{issue}': {suggestion}"

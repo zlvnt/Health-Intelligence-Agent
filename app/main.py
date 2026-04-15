@@ -2,7 +2,6 @@ import asyncio
 import logging
 
 from fastapi import FastAPI
-from sqlalchemy import text
 
 from app.agent.graph import create_agent
 from app.db.database import engine
