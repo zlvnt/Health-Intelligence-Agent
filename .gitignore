@@ -9,5 +9,6 @@ PROGRESS.md
 
 # Test results
 test_results/
-scripts/
+
+# Scripts (local testing utilities)
 scripts/
