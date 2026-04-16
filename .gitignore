@@ -10,5 +10,6 @@ PROGRESS.md
 # Test results
 test_results/
 
-# Scripts (local testing utilities)
-scripts/
+# Test scripts (keep seed_nutrition.py tracked)
+scripts/test_*.py
+scripts/README_TESTING.md
