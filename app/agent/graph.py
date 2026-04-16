@@ -1,8 +1,8 @@
-from langchain_anthropic import ChatAnthropic
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from langgraph.prebuilt import create_react_agent
 from langgraph_supervisor import create_supervisor
 
+from app.agent.model import create_llm
 from app.agent.prompts import (
     ASSESSMENT_PROMPT,
     INTERVENTION_PROMPT,
@@ -22,10 +22,7 @@ from app.agent.tools import (
 from app.config import settings
 from app.rag.nutrition import create_nutrition_tool
 
-llm = ChatAnthropic(
-    model="claude-sonnet-4-20250514",
-    api_key=settings.anthropic_api_key,
-)
+llm = create_llm()  # Uses provider from settings.model_provider
 
 
 async def create_agent():
@@ -71,5 +68,8 @@ async def create_agent():
         output_mode="full_history",
     )
 
-    agent = workflow.compile(checkpointer=checkpointer)
+    agent = workflow.compile(
+        checkpointer=checkpointer,
+        recursion_limit=15,  # Safety: prevent excessive agent routing
+    )
     return agent

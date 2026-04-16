@@ -6,3 +6,7 @@ CLAUDE.md
 __pycache__/
 *.pyc
 PROGRESS.md
+
+# Test results
+test_results/
+scripts/
