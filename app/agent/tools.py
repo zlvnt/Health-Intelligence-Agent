@@ -1,20 +1,33 @@
 from langchain_core.tools import tool
 
+from app.config import settings
 from app.db import queries
+
+
+def _get_telegram_id(telegram_id: int | None) -> int:
+    """Get telegram_id, using test ID if in test mode and none provided."""
+    if telegram_id is None:
+        if settings.test_mode:
+            return settings.test_telegram_id
+        else:
+            raise ValueError("telegram_id is required (not in test mode)")
+    return telegram_id
 
 
 # --- Tracking Agent Tools (existing) ---
 
 @tool
 async def log_meal(
-    telegram_id: int,
     food_name: str,
     calories: float,
+    telegram_id: int | None = None,
     protein_g: float = 0.0,
     carbs_g: float = 0.0,
     fat_g: float = 0.0,
 ) -> str:
     """Log a meal for the user. Call this after estimating nutrition info."""
+    telegram_id = _get_telegram_id(telegram_id)
+
     meal = await queries.add_meal(
         telegram_id=telegram_id,
         food_name=food_name,
@@ -27,8 +40,10 @@ async def log_meal(
 
 
 @tool
-async def get_daily_summary(telegram_id: int) -> str:
+async def get_daily_summary(telegram_id: int | None = None) -> str:
     """Get today's total nutrition intake and compare against calorie goal."""
+    telegram_id = _get_telegram_id(telegram_id)
+
     totals = await queries.get_daily_totals(telegram_id)
     goal = await queries.get_calorie_goal(telegram_id)
 
@@ -50,8 +65,10 @@ async def get_daily_summary(telegram_id: int) -> str:
 
 
 @tool
-async def get_meal_history(telegram_id: int, days: int = 7) -> str:
+async def get_meal_history(days: int = 7, telegram_id: int | None = None) -> str:
     """Get the user's meal history for the past N days."""
+    telegram_id = _get_telegram_id(telegram_id)
+
     meals = await queries.get_meal_history(telegram_id, days)
     if not meals:
         return f"No meals logged in the past {days} days."
@@ -64,8 +81,10 @@ async def get_meal_history(telegram_id: int, days: int = 7) -> str:
 
 
 @tool
-async def set_calorie_goal(telegram_id: int, daily_calories: float) -> str:
+async def set_calorie_goal(daily_calories: float, telegram_id: int | None = None) -> str:
     """Set or update the user's daily calorie goal."""
+    telegram_id = _get_telegram_id(telegram_id)
+
     await queries.set_calorie_goal(telegram_id, daily_calories)
     return f"Daily calorie goal set to {daily_calories:.0f} kcal."
 
@@ -73,10 +92,12 @@ async def set_calorie_goal(telegram_id: int, daily_calories: float) -> str:
 # --- Assessment Agent Tools (placeholder) ---
 
 @tool
-async def collect_health_data(telegram_id: int, data_type: str, value: str) -> str:
+async def collect_health_data(data_type: str, value: str, telegram_id: int | None = None) -> str:
     """Store a piece of health/lifestyle data collected from the user.
     data_type examples: 'age', 'weight', 'height', 'activity_level', 'dietary_preference', 'health_goal'
     """
+    telegram_id = _get_telegram_id(telegram_id)
+
     # TODO: persist to user profile in DB
     return f"Stored {data_type}: {value} for user {telegram_id}"
 
@@ -84,8 +105,10 @@ async def collect_health_data(telegram_id: int, data_type: str, value: str) -> s
 # --- Planning Agent Tools (placeholder) ---
 
 @tool
-async def create_health_plan(telegram_id: int, plan_summary: str) -> str:
+async def create_health_plan(plan_summary: str, telegram_id: int | None = None) -> str:
     """Create and store a structured health plan for the user."""
+    telegram_id = _get_telegram_id(telegram_id)
+
     # TODO: persist plan to DB
     return f"Health plan created for user {telegram_id}: {plan_summary}"
 
@@ -93,7 +116,9 @@ async def create_health_plan(telegram_id: int, plan_summary: str) -> str:
 # --- Intervention Agent Tools (placeholder) ---
 
 @tool
-async def suggest_adjustment(telegram_id: int, issue: str, suggestion: str) -> str:
+async def suggest_adjustment(issue: str, suggestion: str, telegram_id: int | None = None) -> str:
     """Suggest an adjustment to the user's health plan based on adherence issues."""
+    telegram_id = _get_telegram_id(telegram_id)
+
     # TODO: persist adjustment to DB
     return f"Adjustment suggested for '{issue}': {suggestion}"

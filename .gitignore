@@ -13,3 +13,4 @@ test_results/
 # Test scripts (keep seed_nutrition.py tracked)
 scripts/test_*.py
 scripts/README_TESTING.md
+docs/

@@ -11,7 +11,7 @@ from langchain_core.language_models import BaseChatModel
 
 from app.config import settings
 
-ModelProvider = Literal["anthropic", "openai", "google", "ollama"]
+ModelProvider = Literal["anthropic", "openai", "google", "ollama", "minimax"]
 
 
 def create_llm(provider: ModelProvider | None = None) -> BaseChatModel:
@@ -65,6 +65,16 @@ def create_llm(provider: ModelProvider | None = None) -> BaseChatModel:
         return ChatOllama(
             model=getattr(settings, "ollama_model", "llama3.1"),
             base_url=getattr(settings, "ollama_base_url", "http://localhost:11434"),
+            temperature=0.7,
+        )
+
+    elif provider == "minimax":
+        from langchain_anthropic import ChatAnthropic
+
+        return ChatAnthropic(
+            base_url=getattr(settings, "minimax_base_url", "https://api.minimax.io/anthropic"),
+            api_key=settings.minimax_api_key,
+            model=getattr(settings, "minimax_model", "MiniMax-M2.7"),
             temperature=0.7,
         )
 

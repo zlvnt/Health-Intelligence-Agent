@@ -2,7 +2,7 @@ from typing import Literal
 
 from pydantic_settings import BaseSettings
 
-ModelProvider = Literal["anthropic", "openai", "google", "ollama"]
+ModelProvider = Literal["anthropic", "openai", "google", "ollama", "minimax"]
 
 
 class Settings(BaseSettings):
@@ -25,6 +25,11 @@ class Settings(BaseSettings):
     ollama_model: str = "llama3.1"
     ollama_base_url: str = "http://localhost:11434"
 
+    # Minimax (Anthropic-compatible)
+    minimax_api_key: str = ""
+    minimax_base_url: str = "https://api.minimax.io/anthropic"
+    minimax_model: str = "MiniMax-M2.7"
+
     # Telegram
     telegram_bot_token: str
 
@@ -34,6 +39,10 @@ class Settings(BaseSettings):
 
     # Vector Store
     qdrant_url: str = "http://localhost:6333"
+
+    # Testing
+    test_mode: bool = False
+    test_telegram_id: int = 123
 
     model_config = {"env_file": ".env"}
 
