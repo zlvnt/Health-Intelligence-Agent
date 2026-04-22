@@ -1,6 +1,7 @@
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from langgraph.prebuilt import create_react_agent
 from langgraph_supervisor import create_handoff_tool, create_supervisor
+from psycopg_pool import AsyncConnectionPool
 
 from app.agent.model import create_llm
 from app.agent.prompts import (
@@ -25,10 +26,9 @@ from app.rag.nutrition import create_nutrition_tool
 llm = create_llm()  # Uses provider from settings.model_provider
 
 
-async def create_agent():
-    # TODO: Fix checkpointer initialization
-    # For now, skip checkpointer (no conversation persistence)
-    checkpointer = None
+async def create_agent(pool: AsyncConnectionPool):
+    checkpointer = AsyncPostgresSaver(pool)
+    await checkpointer.setup()
 
     nutrition_tool = create_nutrition_tool()
 
