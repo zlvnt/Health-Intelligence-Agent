@@ -10,6 +10,9 @@ PROGRESS.md
 # Test results
 test_results/
 
+# Chat flow logs
+logs/
+
 # Test scripts (keep seed_nutrition.py tracked)
 scripts/test_*.py
 scripts/README_TESTING.md

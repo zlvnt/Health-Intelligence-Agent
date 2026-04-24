@@ -31,7 +31,7 @@ class Settings(BaseSettings):
     minimax_model: str = "MiniMax-M2.7"
 
     # Telegram
-    telegram_bot_token: str
+    telegram_bot_token: str = ""
 
     # Database
     database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/health_agent"

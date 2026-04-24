@@ -27,8 +27,10 @@ llm = create_llm()  # Uses provider from settings.model_provider
 
 
 async def create_agent(pool: AsyncConnectionPool):
+    # setup() needs autocommit (CREATE INDEX CONCURRENTLY), so use from_conn_string for one-time setup
+    async with AsyncPostgresSaver.from_conn_string(settings.checkpointer_db_url) as tmp:
+        await tmp.setup()
     checkpointer = AsyncPostgresSaver(pool)
-    await checkpointer.setup()
 
     nutrition_tool = create_nutrition_tool()
 
