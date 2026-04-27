@@ -44,7 +44,7 @@ class Settings(BaseSettings):
     test_mode: bool = False
     test_telegram_id: int = 123
 
-    model_config = {"env_file": ".env"}
+    model_config = {"env_file": ".env", "extra": "ignore"}
 
 
 settings = Settings()

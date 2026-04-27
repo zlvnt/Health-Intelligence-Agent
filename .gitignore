@@ -17,3 +17,5 @@ logs/
 scripts/test_*.py
 scripts/README_TESTING.md
 docs/
+CONTEXT.mdeval/results/
+eval/docs/

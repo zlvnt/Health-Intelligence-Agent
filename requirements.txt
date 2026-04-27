@@ -32,3 +32,7 @@ fastembed>=0.4.0
 python-dotenv>=1.0.0
 pydantic>=2.10.0
 pydantic-settings>=2.7.0
+
+# Evaluation
+langsmith>=0.2.0
+deepeval>=2.0.0
