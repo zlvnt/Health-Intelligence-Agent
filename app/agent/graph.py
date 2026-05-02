@@ -1,5 +1,5 @@
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
-from langgraph.prebuilt import create_react_agent
+from langchain.agents import create_agent as create_react_agent
 from langgraph_supervisor import create_handoff_tool, create_supervisor
 from psycopg_pool import AsyncConnectionPool
 
@@ -45,14 +45,14 @@ async def create_agent(pool: AsyncConnectionPool):
         model=llm,
         tools=[collect_health_data],
         name="assessment_agent",
-        prompt=ASSESSMENT_PROMPT,
+        system_prompt=ASSESSMENT_PROMPT,
     )
 
     planning_agent = create_react_agent(
         model=llm,
         tools=[create_health_plan],
         name="planning_agent",
-        prompt=PLANNING_PROMPT,
+        system_prompt=PLANNING_PROMPT,
     )
 
     tracking_agent = create_react_agent(
@@ -66,14 +66,14 @@ async def create_agent(pool: AsyncConnectionPool):
             handoff_to_intervention,
         ],
         name="tracking_agent",
-        prompt=TRACKING_PROMPT,
+        system_prompt=TRACKING_PROMPT,
     )
 
     intervention_agent = create_react_agent(
         model=llm,
         tools=[suggest_adjustment],
         name="intervention_agent",
-        prompt=INTERVENTION_PROMPT,
+        system_prompt=INTERVENTION_PROMPT,
     )
 
     # Supervisor orchestrator
