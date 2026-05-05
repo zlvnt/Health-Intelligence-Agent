@@ -14,6 +14,10 @@ The bias of this guide: prefer simpler patterns. Multi-agent is the right tool f
 6. [Evaluation](06-evaluation.md) — what to measure, test case design, metrics, LLM-as-judge, reading results
 7. [Case Reference](07-case-reference.md) — pointer to the Health Intelligence Agent project as a worked example
 
+## Appendix
+
+- [Pattern Variants](appendix-patterns.md) — plan-and-execute, hierarchical, peer-to-peer; when to reach for them instead of supervisor
+
 ## Prerequisites
 
 - Python familiarity

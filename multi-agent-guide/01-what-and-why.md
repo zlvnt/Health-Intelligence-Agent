@@ -1,6 +1,6 @@
 # 1. What and Why
 
-Multi-agent orchestration splits a single user request across multiple LLM-powered agents, each with a focused role and tool set. A coordinator — usually called a *supervisor* or *orchestrator* — decides which agent handles which part of the request, and how partial results combine into a final response.
+Multi-agent orchestration splits a single user request across multiple LLM-powered agents, each with a focused role and tool set. A coordinator, usually called a *supervisor* or *orchestrator*, decides which agent handles which part of the request, and how partial results combine into a final response.
 
 A typical setup:
 
@@ -21,7 +21,7 @@ User message
 
 Each specialist has its own prompt, its own subset of tools, and (sometimes) its own model. The supervisor sees the conversation history but does not invoke domain tools — its job is routing.
 
-Supervisor is one pattern among several. Plan-and-execute splits planning from execution. Hierarchical stacks supervisors of supervisors. Peer-to-peer skips the central coordinator entirely. This guide focuses on supervisor because it is the most common starting point and the one most multi-agent frameworks (LangGraph, CrewAI, AutoGen) put in the README example.
+Supervisor is one pattern among several. Plan-and-execute splits planning from execution. Hierarchical stacks supervisors of supervisors. Peer-to-peer skips the central coordinator entirely. This guide focuses on supervisor because it is the most common starting point and the one most multi-agent frameworks (LangGraph, CrewAI, AutoGen) put in the README example. For deeper coverage of the other patterns, see [appendix-patterns.md](appendix-patterns.md).
 
 ## 1.1 The single-agent baseline
 
@@ -35,11 +35,14 @@ For most tasks this is enough. The model is competent at routing tool calls base
 
 The single-agent ceiling shows up in three places.
 
-**Prompt overload.** When a single prompt encodes multiple personas (assistant for X, expert for Y, advisor for Z), each with different tone, scope, and rules, the prompt grows long and the model becomes inconsistent. Rules conflict. New rules cause regressions in old behavior.
+**1. Prompt overload.** 
+When a single prompt encodes multiple personas (assistant for X, expert for Y, advisor for Z), each with different tone, scope, and rules, the prompt grows long and the model becomes inconsistent. Rules conflict. New rules cause regressions in old behavior.
 
-**Tool selection error rate.** Selection accuracy degrades as the toolbox grows. Past 10–15 tools, models pick the wrong tool, especially when descriptions overlap. Smaller models hit this limit sooner.
+**2.Tool selection error rate.** 
+Selection accuracy degrades as the toolbox grows. Past 10–15 tools, models pick the wrong tool, especially when descriptions overlap. Smaller models hit this limit sooner.
 
-**Context contamination.** A user logging meals asks a question about meal planning mid-conversation. The model carries logging context into the planning response and references calorie counts the user did not actually request.
+**3.Context contamination.** 
+A user logging meals asks a question about meal planning mid-conversation. The model carries logging context into the planning response and references calorie counts the user did not actually request.
 
 These ceilings are not theoretical. They appear in production logs once the assistant handles real conversations.
 
@@ -74,13 +77,17 @@ A turn that was one LLM call becomes four. Latency and token cost scale with it.
 
 New failure modes appear that single-agent systems do not have:
 
-**Routing errors.** The supervisor sends the request to the wrong specialist.
+**1. Routing errors.** 
+The supervisor sends the request to the wrong specialist.
 
-**Handoff loops.** Supervisor → specialist A → specialist B → specialist A → ... Each hop costs a full LLM call. Loops can run until token limits stop them.
+**2. Handoff loops.** 
+Supervisor → specialist A → specialist B → specialist A → ... Each hop costs a full LLM call. Loops can run until token limits stop them.
 
-**State sharing failures.** Specialist B does not know what specialist A learned, because state lives in the conversation history and B parses it incorrectly. Data the user already provided gets re-asked.
+**3. State sharing failures.** 
+Specialist B does not know what specialist A learned, because state lives in the conversation history and B parses it incorrectly. Data the user already provided gets re-asked.
 
-**Inconsistent persona.** The supervisor wraps the specialist's response in its own voice, smoothing over the specialization that motivated the split in the first place.
+**4. Inconsistent persona.** 
+The supervisor wraps the specialist's response in its own voice, smoothing over the specialization that motivated the split in the first place.
 
 These failure modes are why production multi-agent systems need evaluation infrastructure that single-agent systems can usually skip.
 
@@ -88,13 +95,17 @@ These failure modes are why production multi-agent systems need evaluation infra
 
 The overhead pays for itself when at least one of these is true.
 
-**Sub-tasks are genuinely independent.** A research assistant fans out to five sources in parallel, each with its own retrieval strategy and prompt, then synthesizes. Wall-clock time drops because the work runs concurrently. Single-agent cannot do this — it is sequential by construction.
+**1. Sub-tasks are genuinely independent.** 
+A research assistant fans out to five sources in parallel, each with its own retrieval strategy and prompt, then synthesizes. Wall-clock time drops because the work runs concurrently. Single-agent cannot do this — it is sequential by construction.
 
-**Adversarial setup is part of the design.** Debate simulators, red-team vs blue-team, proof-by-contradiction. The agents are supposed to push against each other. Collapsing them into one prompt collapses the design.
+**2. Adversarial setup is part of the design.** 
+Debate simulators, red-team vs blue-team, proof-by-contradiction. The agents are supposed to push against each other. Collapsing them into one prompt collapses the design.
 
-**Expertise is divergent enough that prompts cannot share.** Legal, financial, and medical review on the same document each need different prompts, different retrieval corpora, sometimes different models. A single prompt covering all three would be unmanageable.
+**3. Expertise is divergent enough that prompts cannot share.** 
+Legal, financial, and medical review on the same document each need different prompts, different retrieval corpora, sometimes different models. A single prompt covering all three would be unmanageable.
 
-**Routing genuinely needs LLM judgment.** Input is ambiguous, intent cannot be classified by keyword or pattern, and the choice of handler depends on subtle signals only an LLM can read.
+**4. Routing genuinely needs LLM judgment.** 
+Input is ambiguous, intent cannot be classified by keyword or pattern, and the choice of handler depends on subtle signals only an LLM can read.
 
 If none of these are true, the multi-agent overhead pays for flexibility the workload does not use.
 

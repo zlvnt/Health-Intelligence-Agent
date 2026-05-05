@@ -124,3 +124,60 @@ Use a smaller model for the supervisor. Routing is cheaper reasoning than conten
 Some frameworks support skipping the finalize step entirely (return the specialist's reply directly). Check whether yours does. The tradeoff is losing the supervisor's ability to normalize formatting, enforce language rules, or catch anti-fabrication violations in the specialist's output.
 
 Prompt caching helps for the part of the cost that is fixed: the supervisor's system prompt and persistent context. Anthropic and OpenAI both offer caching. A 90% discount on the static portion of supervisor calls is meaningful when the supervisor runs twice per turn.
+
+## 4.7 Audience ambiguity in specialist output
+
+**What it looks like.** A specialist's reply reads like a message to the end user — greeting, conversational tone, a question directed at the user. But the immediate reader of that reply is the supervisor (or another specialist), not the user. The supervisor either forwards verbatim and the user sees a reply that almost works, or worse, the supervisor reads the specialist's question as a question to *itself* and routes again, or wraps the reply in its own voice and double-greets the user.
+
+A concrete pattern: assessment specialist replies "Halo! Datamu sudah saya catat — umur 25, BB 70kg. Mau lanjut bikin plan?" The supervisor consumes this. Two failure modes are possible:
+- Supervisor treats "Mau lanjut bikin plan?" as the user's intent and routes to planning, producing a plan the user never asked for.
+- Supervisor's finalize step adds its own greeting on top: "Halo Ted! Datanya sudah tersimpan: umur 25, BB 70kg. Mau lanjut bikin plan?" — the user sees double-greeting and an offer for a step the supervisor decided unilaterally.
+
+**Why it happens.** LLMs are trained on conversational data where the receiver is a human. Default reply style is human-facing: greeting, polite closing, offer of next steps. The specialist does not know its reply will be parsed by another LLM before reaching the user. There is no natural cue in the prompt or the runtime to make it write differently.
+
+**Detection.** Read specialist outputs and ask: "if the supervisor reads this verbatim, what does it think the user wants?" If the answer is ambiguous or wrong, the specialist is producing user-facing prose where structured status would serve better.
+
+**Mitigation.** Four options, from lightest to heaviest.
+
+**Limit context flow with `output_mode="last_message"`.** Reduces how much of the specialist's chatter the supervisor sees. Does not solve the problem — the last message is still user-facing prose — but reduces the surface area for misinterpretation.
+
+**Tell the specialist who its reader is.** Add to the specialist's prompt:
+
+```
+Your reply is forwarded directly to the end user by the supervisor. Reply concisely
+to the user. Do not address the supervisor. Do not include greetings, sign-offs, or
+offers of further help — those are added by other parts of the system.
+```
+
+Or, if the specialist's reply is for the supervisor's consumption rather than the user's:
+
+```
+Your reply is read by a coordinator agent, not the user. Output a brief structured
+status: what was done, what data was collected, what (if anything) requires the user.
+The coordinator will compose the user-facing message.
+```
+
+**Two-tier output via structured response.** Specialist returns a structured object with separate user-facing and internal fields:
+
+```python
+{
+  "user_message": "Data tersimpan: umur 25, BB 70kg.",
+  "internal_status": "data_collected",
+  "next_step_suggestion": "planning"
+}
+```
+
+The supervisor consumes `internal_status` for routing decisions and forwards `user_message` to the user. Cleanly separates the two audiences. Requires framework support for structured output or a custom response parser.
+
+**Handoff payloads with explicit context.** When specialists hand off to each other directly (cross-specialist handoff in Section 2.4), pass structured payloads instead of relying on the receiver to parse the previous specialist's prose:
+
+```python
+transfer_to_planning_agent(
+    profile={"age": 25, "weight": 70, "activity": "sedentary"},
+    goal="lose 5kg in 2 months",
+)
+```
+
+The receiving specialist gets explicit data, not a conversational message it has to interpret. Eliminates the audience-ambiguity problem at the seam where it most often breaks.
+
+**The deeper point.** Multi-agent systems treat conversation history as the inter-agent communication channel. That channel was never designed for it — it was designed for human-LLM dialogue. Prompts and structured outputs are the patches. When patches stop scaling, the workload is signalling that prose-based agent communication has hit its limit, and structured protocols (function-call payloads, typed state objects) are the next move.

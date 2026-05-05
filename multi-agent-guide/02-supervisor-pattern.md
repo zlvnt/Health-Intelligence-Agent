@@ -4,11 +4,14 @@ The supervisor pattern has three components: a supervisor LLM, a set of speciali
 
 ## 2.1 Components
 
-**The supervisor.** An LLM with a prompt describing the available specialists and their responsibilities. The supervisor does not call domain tools (no `log_meal`, no `create_plan`). It has exactly one kind of tool: handoff tools, one per specialist.
+**1. The supervisor.** 
+An LLM with a prompt describing the available specialists and their responsibilities. The supervisor does not call domain tools (no `log_meal`, no `create_plan`). It has exactly one kind of tool: handoff tools, one per specialist.
 
-**Specialists.** Agents with focused prompts and small tool sets. Each specialist is itself a ReAct agent — it can call tools, observe results, and reason in a loop until done. The specialist is unaware of the supervisor; it sees a request and responds.
+**2. Specialists.** 
+Agents with focused prompts and small tool sets. Each specialist is itself a ReAct agent, it can call tools, observe results, and reason in a loop until done. The specialist is unaware of the supervisor; it sees a request and responds.
 
-**Handoff tools.** Functions the supervisor can call to transfer control to a specialist. They are not regular tools. Calling a handoff tool ends the supervisor's turn and starts the named specialist's turn, with conversation state passed along.
+**3. Handoff tools.** 
+Functions the supervisor can call to transfer control to a specialist. They are not regular tools. Calling a handoff tool ends the supervisor's turn and starts the named specialist's turn, with conversation state passed along.
 
 A minimal customer-support example:
 
@@ -60,15 +63,18 @@ The pattern looks simple in the diagram. The actual flow is a state machine with
 
 ## 2.3 State
 
-State is the conversation history plus any framework-managed metadata. By default, every message — user input, supervisor decisions, tool calls, tool results, specialist replies — accumulates into a single list and gets passed to whichever agent runs next.
+State is the conversation history plus any framework-managed metadata. By default, every message like user input, supervisor decisions, tool calls, tool results, specialist replies, accumulates into a single list and gets passed to whichever agent runs next.
 
 This has consequences.
 
-**Specialists see everything.** The billing agent sees the supervisor's reasoning, prior specialists' outputs, and the user's full message. This is helpful for context and dangerous for prompt drift — the specialist may pick up tone or instructions from the supervisor's chatter.
+**1. Specialists see everything.** 
+The billing agent sees the supervisor's reasoning, prior specialists' outputs, and the user's full message. This is helpful for context and dangerous for prompt drift, the specialist may pick up tone or instructions from the supervisor's chatter.
 
-**Tool results stay visible.** A specialist that ran `lookup_invoice` leaves the invoice data in state. The next specialist (or the supervisor) can read it. This is how implicit data sharing works across agents — and where it breaks down when prompts do not specify what to read.
+**2. Tool results stay visible.** 
+A specialist that ran `lookup_invoice` leaves the invoice data in state. The next specialist (or the supervisor) can read it. This is how implicit data sharing works across agents — and where it breaks down when prompts do not specify what to read.
 
-**Output mode controls what flows back.** LangGraph's `create_supervisor` accepts `output_mode="full_history"` (everything) or `output_mode="last_message"` (only the specialist's final reply). `last_message` is cheaper and reduces context contamination. `full_history` preserves trace for debugging and gives the supervisor more to reason about.
+**3. Output mode controls what flows back.** 
+LangGraph's `create_supervisor` accepts `output_mode="full_history"` (everything) or `output_mode="last_message"` (only the specialist's final reply). `last_message` is cheaper and reduces context contamination. `full_history` preserves trace for debugging and gives the supervisor more to reason about.
 
 ```python
 workflow = create_supervisor(
