@@ -89,7 +89,7 @@ A stricter version requires sequence match. A more lenient version checks set me
 
 ### Tool correctness
 
-Compare actual tools called to expected tools. Same approach as routing: strict (sequence match) or lenient (set membership). Argument-level checking is harder — argument values may legitimately vary across runs (timestamps, generated IDs). Schema-level checking (the right argument *types* and *required fields* present) is more robust than value-level checking.
+Compare actual tools called to expected tools. Same approach as routing: strict (sequence match) or lenient (set membership). Argument-level checking is harder because argument values may legitimately vary across runs (timestamps, generated IDs). Schema-level checking (the right argument *types* and *required fields* present) is more robust than value-level checking.
 
 ### Task completion
 
@@ -99,7 +99,7 @@ The hardest of the five to measure mechanically. Two approaches.
 
 **LLM-as-judge.** A separate LLM reads the test case and the agent's response, and scores whether the task appears to have been completed. Cheaper to set up; less reliable than effect-based.
 
-Use effect-based when feasible. Use judge as fallback for cases where the side effect is hard to verify (a diagnosis was "produced" — what does that mean concretely?).
+Use effect-based when feasible. Use judge as fallback for cases where the side effect is hard to verify (a diagnosis was "produced", what does that mean concretely?).
 
 ### Response quality
 

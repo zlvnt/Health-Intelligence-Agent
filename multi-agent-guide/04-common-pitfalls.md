@@ -4,13 +4,17 @@ The supervisor pattern produces a small set of failure modes that recur across p
 
 ## 4.1 Handoff loops
 
-**What it looks like.** The trace shows `supervisor → specialist_A → supervisor → specialist_A → ...` cycling. Each iteration is a full LLM call. The conversation does not progress. Eventually a token limit, recursion limit, or rate limit halts the loop, and the user gets either an error or a confused partial response.
+**1. What it looks like.** 
 
-**Why it happens.** The supervisor sees a specialist's reply and decides the work is incomplete, so it routes back to the same specialist. The specialist sees the same context and produces a similar reply. The loop is stable: each side does what its prompt says.
+The trace shows `supervisor → specialist_A → supervisor → specialist_A → ...` cycling. Each iteration is a full LLM call. The conversation does not progress. Eventually a token limit, recursion limit, or rate limit halts the loop, and the user gets either an error or a confused partial response.
+
+**2. Why it happens.** 
+
+The supervisor sees a specialist's reply and decides the work is incomplete, so it routes back to the same specialist. The specialist sees the same context and produces a similar reply. The loop is stable: each side does what its prompt says.
 
 A common trigger: the specialist asks the user a clarifying question instead of finalizing. The supervisor reads this as "the specialist did not finish" and routes again. The specialist is waiting for a user reply that never comes within this turn.
 
-**Mitigation.**
+**3. Mitigation.**
 
 A hard recursion limit at the graph level. LangGraph's `recursion_limit` config caps total node executions per turn:
 
@@ -30,15 +34,18 @@ Cross-specialist handoffs (specialist A to specialist B directly) require their 
 
 ## 4.2 Prompt rule accumulation
 
-**What it looks like.** The supervisor prompt grows from 200 words to 800 over the course of a project. New rules get added each time a behavior is observed in production: STOP rules, anti-fabrication rules, output formatting rules, language rules, ambiguous-input rules, anti-overstep rules. Each rule fixes one observed failure. The prompt becomes hard to reason about as a whole.
+**1. What it looks like.** 
+The supervisor prompt grows from 200 words to 800 over the course of a project. New rules get added each time a behavior is observed in production: STOP rules, anti-fabrication rules, output formatting rules, language rules, ambiguous-input rules, anti-overstep rules. Each rule fixes one observed failure. The prompt becomes hard to reason about as a whole.
 
-**Why it happens.** Multi-agent failure modes do not come with neat names. Each one looks like a unique bug the first time you see it. The natural reaction is to add a prompt clause that prevents that specific case. Over time, clauses interact in ways that were not anticipated.
+**2. Why it happens.** 
+Multi-agent failure modes do not come with neat names. Each one looks like a unique bug the first time you see it. The natural reaction is to add a prompt clause that prevents that specific case. Over time, clauses interact in ways that were not anticipated.
 
-The deeper cause: the supervisor is being asked to enforce policy with natural-language rules. Some kinds of policy are easier to enforce in code than in prompts. Routing rules that match keywords are an example — easier to implement as a classifier or regex than to express as prompt instructions the LLM follows reliably.
+The deeper cause: the supervisor is being asked to enforce policy with natural-language rules. Some kinds of policy are easier to enforce in code than in prompts. Routing rules that match keywords are an example, easier to implement as a classifier or regex than to express as prompt instructions the LLM follows reliably.
 
-**Detection signal.** The prompt has more than three CRITICAL or ABSOLUTE markers. Rules contradict each other in edge cases. Different LLMs interpret the same prompt and produce different routing.
+**3. Detection signal.** 
+The prompt has more than three CRITICAL or ABSOLUTE markers. Rules contradict each other in edge cases. Different LLMs interpret the same prompt and produce different routing.
 
-**Mitigation.**
+**4. Mitigation.**
 
 Promote frequently-violated rules out of the prompt and into code. If the supervisor keeps routing to the wrong specialist for "refund" requests, replace LLM routing for that intent with a keyword classifier. The supervisor becomes the fallback for ambiguous cases.
 
@@ -48,9 +55,9 @@ For rules that genuinely need to stay in the prompt, group them into named block
 
 **What it looks like.** A specialist asks for information the user already provided. Or the specialist generates a generic output despite specific user data being present in the message history. Or two specialists disagree about a value because they parsed the same message differently.
 
-**Why it happens.** Multi-agent state is the conversation history. Specialists do not share a typed object — they share a stream of messages, and each one parses what it needs out of free-form text. Parsing is LLM inference, with all the variance that implies.
+**Why it happens.** Multi-agent state is the conversation history. Specialists do not share a typed object; they share a stream of messages, and each one parses what it needs out of free-form text. Parsing is LLM inference, with all the variance that implies.
 
-A concrete pattern: the billing specialist's prompt says "use the ticket context from triage when processing the refund." The model interprets this literally — ticket context means a structured summary from the triage specialist. If triage ran but only persisted data via tool calls (no summary text), or if triage was skipped entirely and the user described the issue directly in their message, billing does not find what it expects and produces a generic "please provide your account details" reply.
+A concrete pattern: the billing specialist's prompt says "use the ticket context from triage when processing the refund." The model interprets this literally: ticket context means a structured summary from the triage specialist. If triage ran but only persisted data via tool calls (no summary text), or if triage was skipped entirely and the user described the issue directly in their message, billing does not find what it expects and produces a generic "please provide your account details" reply.
 
 **Mitigation.**
 
@@ -98,7 +105,7 @@ A more durable defense: tool design. If the only way to "save" data is to call `
 
 ## 4.5 Tool-use reliability is model-dependent
 
-**What it looks like.** The supervisor decides correctly to route to a specialist — the reasoning trace shows "I should call transfer_to_triage" — but no tool call is emitted. The supervisor replies with text instead. Or the triage specialist correctly identifies four ticket fields to save but only emits one `collect_ticket_info` call. The remaining three are mentioned in the response text but never persisted.
+**What it looks like.** The supervisor decides correctly to route to a specialist (the reasoning trace shows "I should call transfer_to_triage") but no tool call is emitted. The supervisor replies with text instead. Or the triage specialist correctly identifies four ticket fields to save but only emits one `collect_ticket_info` call. The remaining three are mentioned in the response text but never persisted.
 
 **Why it happens.** Tool calling is a separate capability from text generation. Some models, especially smaller or older ones, have a noticeable gap between deciding to use a tool and actually emitting the structured tool call. Reasoning models can produce long chain-of-thought that concludes "I will call X" and then skip emission.
 
@@ -112,7 +119,7 @@ If the budget does not allow that, design tools so the model gets immediate feed
 
 ## 4.6 The supervisor's finalize step
 
-**What it looks like.** A turn that should be one routing decision and one specialist reply ends up with three or four LLM calls. The supervisor runs once to route, the specialist runs (possibly with multiple tool calls), and then the supervisor runs again to "finalize" — wrap or forward the specialist's reply. Sometimes the supervisor runs a third time after that.
+**What it looks like.** A turn that should be one routing decision and one specialist reply ends up with three or four LLM calls. The supervisor runs once to route, the specialist runs (possibly with multiple tool calls), and then the supervisor runs again to "finalize", wrapping or forwarding the specialist's reply. Sometimes the supervisor runs a third time after that.
 
 **Why it happens.** This is how the supervisor pattern is wired. After a specialist completes, control returns to the supervisor. The supervisor's prompt includes routing logic, so it evaluates whether more routing is needed. Even a STOP rule still requires an LLM call to read the rule and decide to stop.
 
@@ -128,11 +135,11 @@ Prompt caching helps for the part of the cost that is fixed: the supervisor's sy
 
 ## 4.7 Audience ambiguity in specialist output
 
-**What it looks like.** A specialist's reply reads like a message to the end user — greeting, conversational tone, a question directed at the user. But the immediate reader of that reply is the supervisor (or another specialist), not the user. The supervisor either forwards verbatim and the user sees a reply that almost works, or worse, the supervisor reads the specialist's question as a question to *itself* and routes again, or wraps the reply in its own voice and double-greets the user.
+**What it looks like.** A specialist's reply reads like a message to the end user, with greeting, conversational tone, and a question directed at the user. But the immediate reader of that reply is the supervisor (or another specialist), not the user. The supervisor either forwards verbatim and the user sees a reply that almost works, or worse, the supervisor reads the specialist's question as a question to *itself* and routes again, or wraps the reply in its own voice and double-greets the user.
 
 A concrete pattern: triage specialist replies "Hi! I've logged your ticket — account ACC-1042, issue: payment failed on checkout. Want me to escalate to billing?" The supervisor consumes this. Two failure modes are possible:
 - Supervisor treats "Want me to escalate to billing?" as the user's intent and routes to billing, processing a refund the user never asked for.
-- Supervisor's finalize step adds its own greeting on top: "Hi! Your ticket is logged: account ACC-1042, payment failed on checkout. Want me to escalate to billing?" — the user sees double-greeting and an offer for a step the supervisor decided unilaterally.
+- Supervisor's finalize step adds its own greeting on top: "Hi! Your ticket is logged: account ACC-1042, payment failed on checkout. Want me to escalate to billing?" The user sees double-greeting and an offer for a step the supervisor decided unilaterally.
 
 **Why it happens.** LLMs are trained on conversational data where the receiver is a human. Default reply style is human-facing: greeting, polite closing, offer of next steps. The specialist does not know its reply will be parsed by another LLM before reaching the user. There is no natural cue in the prompt or the runtime to make it write differently.
 
@@ -140,7 +147,7 @@ A concrete pattern: triage specialist replies "Hi! I've logged your ticket — a
 
 **Mitigation.** Four options, from lightest to heaviest.
 
-**Limit context flow with `output_mode="last_message"`.** Reduces how much of the specialist's chatter the supervisor sees. Does not solve the problem — the last message is still user-facing prose — but reduces the surface area for misinterpretation.
+**Limit context flow with `output_mode="last_message"`.** Reduces how much of the specialist's chatter the supervisor sees. Does not solve the problem (the last message is still user-facing prose) but reduces the surface area for misinterpretation.
 
 **Tell the specialist who its reader is.** Add to the specialist's prompt:
 
@@ -181,4 +188,4 @@ transfer_to_billing_agent(
 
 The receiving specialist gets explicit data, not a conversational message it has to interpret. Eliminates the audience-ambiguity problem at the seam where it most often breaks.
 
-**The deeper point.** Multi-agent systems treat conversation history as the inter-agent communication channel. That channel was never designed for it — it was designed for human-LLM dialogue. Prompts and structured outputs are the patches. When patches stop scaling, the workload is signalling that prose-based agent communication has hit its limit, and structured protocols (function-call payloads, typed state objects) are the next move.
+**The deeper point.** Multi-agent systems treat conversation history as the inter-agent communication channel. That channel was never designed for it; it was designed for human-LLM dialogue. Prompts and structured outputs are the patches. When patches stop scaling, the workload is signalling that prose-based agent communication has hit its limit, and structured protocols (function-call payloads, typed state objects) are the next move.

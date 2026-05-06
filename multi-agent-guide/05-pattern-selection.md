@@ -24,7 +24,7 @@ Five questions narrow the choice.
 
 If `meal_log` requests always contain food words, `account` requests always contain billing terms, and the categories are mutually exclusive, an LLM is overkill for routing. A classifier (or even regex) is faster, cheaper, and more consistent across model swaps.
 
-If routing depends on subtle signals — tone, implied intent, multi-clause messages with mixed concerns — LLM judgment is the right tool.
+If routing depends on subtle signals (tone, implied intent, multi-clause messages with mixed concerns), LLM judgment is the right tool.
 
 **2. Are the sub-tasks independent or sequential?**
 
@@ -42,7 +42,7 @@ Roles that could share a prompt with a switch ("if billing, do X; if technical, 
 
 If agents work on disjoint slices of the request and their outputs combine at the end, state flow is minimal. Multi-agent works well.
 
-If agents need to share rich state — user profile, prior decisions, accumulated context — every agent re-parsing that state from message history is fragile. Multi-agent works *despite* the framework here, not because of it. A typed shared store (database, structured object) reduces the friction.
+If agents need to share rich state (user profile, prior decisions, accumulated context), every agent re-parsing that state from message history is fragile. Multi-agent works *despite* the framework here, not because of it. A typed shared store (database, structured object) reduces the friction.
 
 **5. What is the latency and cost budget?**
 
@@ -85,4 +85,4 @@ The flow biases toward simpler patterns. This is intentional. Multi-agent is cor
 
 Most projects do not need to commit to a pattern up front. Single agent + classifier is a good starting point. It runs the same tools as a multi-agent setup would, just under one prompt. If the prompt becomes unmanageable or specific failure modes (tool selection drift, persona bleed) appear, splitting one role out into a specialist is mechanical: extract the relevant tools and prompt section into a new agent, route to it for the relevant intent.
 
-Going the other direction — collapsing a multi-agent setup back to single agent — is harder. State and prompt structure assume the split. The lesson: start simple, escalate when you have evidence that simpler is not enough.
+Going the other direction (collapsing a multi-agent setup back to single agent) is harder. State and prompt structure assume the split. The lesson: start simple, escalate when you have evidence that simpler is not enough.

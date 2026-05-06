@@ -12,7 +12,7 @@ The pattern this guide covers in depth. Recap for comparison.
    A1   A2   A3   ← specialists
 ```
 
-A central LLM coordinator routes user requests to one of several specialists. Each specialist has a focused role and tool set. The coordinator does not call domain tools — its job is routing.
+A central LLM coordinator routes user requests to one of several specialists. Each specialist has a focused role and tool set. The coordinator does not call domain tools because its job is routing.
 
 **When to use.** Workloads where intent is clear once classified, but the right way to handle each intent differs significantly enough to warrant separate prompts and tool sets. Most "customer service router" or "domain expert dispatcher" use cases.
 
@@ -32,7 +32,7 @@ A central LLM coordinator routes user requests to one of several specialists. Ea
    step1 ✓ → step2 ✓ → step3 ✓ → step4 ✓
 ```
 
-A planner agent decomposes the request into an explicit, ordered sequence of steps. An executor (or pool of executors) then runs the steps. The plan exists as a first-class artifact — it can be inspected, edited, or replanned mid-execution.
+A planner agent decomposes the request into an explicit, ordered sequence of steps. An executor (or pool of executors) then runs the steps. The plan exists as a first-class artifact: it can be inspected, edited, or replanned mid-execution.
 
 **Difference from supervisor.** Supervisor decides routing one step at a time, reactively. Plan-and-execute decides the whole sequence up front, proactively. Supervisor is reactive; plan-and-execute is deliberative.
 
@@ -81,11 +81,11 @@ No central coordinator. Agents communicate directly with each other, often pushi
 - Iterative refinement where multiple perspectives improve the output (writer + critic + editor cycles)
 - Workloads where no single agent has the authority to decide what is "done"
 
-**Concrete example.** A code-review pipeline. Agent A reviews for security issues. Agent B reviews for performance. Agent C reviews for readability. They run independently and produce critiques. Agent D synthesizes the critiques into a final review. There is no supervisor deciding which critic gets called — all run, and the synthesizer decides what matters.
+**Concrete example.** A code-review pipeline. Agent A reviews for security issues. Agent B reviews for performance. Agent C reviews for readability. They run independently and produce critiques. Agent D synthesizes the critiques into a final review. There is no supervisor deciding which critic gets called; all run, and the synthesizer decides what matters.
 
-Another: debate simulators for evaluation. Agent A argues a position, Agent B argues the opposing position, both iterate. A judge agent (or human) scores at the end. The "router" doesn't exist — both agents always run.
+Another: debate simulators for evaluation. Agent A argues a position, Agent B argues the opposing position, both iterate. A judge agent (or human) scores at the end. The "router" doesn't exist; both agents always run.
 
-**Trade-off.** Coordination is harder. Without a central decision-maker, deciding when to stop and how to combine outputs requires either explicit rules (max iterations, consensus thresholds) or another agent acting as a judge — at which point the system starts looking hierarchical anyway.
+**Trade-off.** Coordination is harder. Without a central decision-maker, deciding when to stop and how to combine outputs requires either explicit rules (max iterations, consensus thresholds) or another agent acting as a judge, at which point the system starts looking hierarchical anyway.
 
 ## A.5 Comparison
 
@@ -108,4 +108,4 @@ The decision criteria from Section 5 (Pattern Selection) apply across all four p
 - **Specialist count** — high count favors hierarchical
 - **Adversarial design** — required favors peer-to-peer (the others cannot model it)
 
-The default starting point is still single-agent. The default escalation path, when single-agent is not enough, is supervisor. The other patterns are specialized tools — reach for them when the workload's shape specifically calls for them.
+The default starting point is still single-agent. The default escalation path, when single-agent is not enough, is supervisor. The other patterns are specialized tools: reach for them when the workload's shape specifically calls for them.

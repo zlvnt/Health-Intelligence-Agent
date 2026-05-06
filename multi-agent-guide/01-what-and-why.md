@@ -19,7 +19,7 @@ User message
 └─────┘ └─────┘ └─────┘
 ```
 
-Each specialist has its own prompt, its own subset of tools, and (sometimes) its own model. The supervisor sees the conversation history but does not invoke domain tools — its job is routing.
+Each specialist has its own prompt, its own subset of tools, and (sometimes) its own model. The supervisor sees the conversation history but does not invoke domain tools, its job is routing.
 
 Supervisor is one pattern among several. Plan-and-execute splits planning from execution. Hierarchical stacks supervisors of supervisors. Peer-to-peer skips the central coordinator entirely. This guide focuses on supervisor because it is the most common starting point and the one most multi-agent frameworks (LangGraph, CrewAI, AutoGen) put in the README example. For deeper coverage of the other patterns, see [appendix-patterns.md](appendix-patterns.md).
 
@@ -31,7 +31,7 @@ Before reaching for multi-agent, build the single-agent version mentally. A sing
 - A toolbox of functions the LLM can call (database queries, API calls, RAG lookups)
 - A loop: receive input, reason, optionally call tools, reply
 
-For most tasks this is enough. The model is competent at routing tool calls based on user intent — `lookup_invoice` for "what's my last bill?", `check_service_status` for "is the API down?". The prompt holds the rules; the tools handle structured operations.
+For most tasks this is enough. The model is competent at routing tool calls based on user intent: `lookup_invoice` for "what's my last bill?", `check_service_status` for "is the API down?". The prompt holds the rules; the tools handle structured operations.
 
 The single-agent ceiling shows up in three places.
 
@@ -96,7 +96,7 @@ These failure modes are why production multi-agent systems need evaluation infra
 The overhead pays for itself when at least one of these is true.
 
 **1. Sub-tasks are genuinely independent.** 
-A research assistant fans out to five sources in parallel, each with its own retrieval strategy and prompt, then synthesizes. Wall-clock time drops because the work runs concurrently. Single-agent cannot do this — it is sequential by construction.
+A research assistant fans out to five sources in parallel, each with its own retrieval strategy and prompt, then synthesizes. Wall-clock time drops because the work runs concurrently. Single-agent cannot do this, it is sequential by construction.
 
 **2. Adversarial setup is part of the design.** 
 Debate simulators, red-team vs blue-team, proof-by-contradiction. The agents are supposed to push against each other. Collapsing them into one prompt collapses the design.

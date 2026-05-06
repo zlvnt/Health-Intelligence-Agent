@@ -30,7 +30,7 @@ def make_llm():
     )
 ```
 
-Haiku is the cheapest production-grade model for a guide example. Swap to Sonnet or GPT-4o for more demanding workloads.
+The model choice is orthogonal to the pattern. Any LangChain-supported chat model class works in the same code with a different import. This example uses Anthropic for concreteness; provider, model size, and pricing are workload-specific decisions.
 
 ## 3.2 Tools
 
@@ -63,8 +63,11 @@ def create_ticket(title: str, severity: str, description: str) -> str:
 
 Two design points worth noting now (Section 4 covers more):
 
-- **Required arguments are typed.** `severity: str` is weak — the model can pass anything. `severity: Literal["low", "medium", "high"]` would constrain it. Stronger schemas reduce hallucinated arguments.
-- **Docstrings are not optional.** They are the model's only signal for tool selection. Vague docstrings cause vague tool calls.
+- **Required arguments are typed.** 
+`severity: str` is weak because the model can pass anything. `severity: Literal["low", "medium", "high"]` would constrain it. Stronger schemas reduce hallucinated arguments.
+
+- **Docstrings are not optional.** 
+They are the model's only signal for tool selection. Vague docstrings cause vague tool calls.
 
 ## 3.3 Specialists
 
@@ -107,7 +110,7 @@ technical = create_react_agent(
 )
 ```
 
-The `if the user asks about X, say so and stop` clause matters. Without it, specialists drift outside their scope and answer adjacent questions. The supervisor cannot enforce scope after the fact — once the specialist replies, the supervisor's options are forward, re-route, or stop.
+The `if the user asks about X, say so and stop` clause matters. Without it, specialists drift outside their scope and answer adjacent questions. The supervisor cannot enforce scope after the fact: once the specialist replies, the supervisor's options are forward, re-route, or stop.
 
 ## 3.4 Supervisor
 
@@ -167,7 +170,7 @@ async for event in graph.astream(
     print(event)
 ```
 
-`astream` yields one event per node update — supervisor decision, tool call, tool result, specialist reply. This is what you log for trace inspection in production.
+`astream` yields one event per node update: supervisor decision, tool call, tool result, specialist reply. This is what you log for trace inspection in production.
 
 ## 3.6 Persistent state
 
@@ -191,7 +194,7 @@ result = await graph.ainvoke({"messages": [...]}, config=config)
 
 Subsequent invokes with the same `thread_id` resume from the saved state. This is what makes multi-turn conversations possible without sending the full message history every call.
 
-In-memory and SQLite checkpointers exist for development. PostgreSQL is the production target.
+In-memory and SQLite checkpointers exist for development. PostgreSQL is the most commonly used production backend in LangGraph (officially supported with full async via `AsyncPostgresSaver`); community checkpointers exist for Redis, MongoDB, and others. Pick based on what your stack already runs.
 
 ## 3.7 What this skeleton gives you and what it does not
 
@@ -210,4 +213,4 @@ You do not have:
 - Tool-use discipline. Some models call tools reliably; others reason about calling them and then skip the actual call. There is no framework-level fix for this.
 - Evaluation infrastructure. You cannot measure routing accuracy without test cases and metrics.
 
-The next section covers the failure modes you will hit. Section 6 covers how to measure them.
+[Section 4 (Common Pitfalls)](04-common-pitfalls.md) covers the failure modes you will hit. [Section 6 (Evaluation)](06-evaluation.md) covers how to measure them.

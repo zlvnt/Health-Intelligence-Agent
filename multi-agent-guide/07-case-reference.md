@@ -17,7 +17,7 @@ Stack: Python, FastAPI, LangGraph supervisor, Claude / Minimax-M2.7 (multi-provi
 
 This project is a working example of every section in this guide.
 
-**Section 1 (What and Why).** The project sits in the awkward zone — health tracking is sequential and the routing is largely keyword-matchable, so it is closer to a single-agent + classifier workload than a multi-agent one. The repository is therefore a useful counterexample: a complete, polished supervisor implementation for a domain that does not need supervisor.
+**Section 1 (What and Why).** The project sits in the awkward zone: health tracking is sequential and the routing is largely keyword-matchable, so it is closer to a single-agent + classifier workload than a multi-agent one. The repository is therefore a useful counterexample: a complete, polished supervisor implementation for a domain that does not need supervisor.
 
 **Section 2 (Supervisor Pattern).** `app/agent/graph.py` shows the full wiring with `create_supervisor`, four ReAct specialists, AsyncPostgresSaver checkpointer, output mode, and lifespan management. The handoff mechanics in Section 2.2 are exactly what runs.
 
