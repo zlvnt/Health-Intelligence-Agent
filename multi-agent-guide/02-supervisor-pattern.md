@@ -102,7 +102,7 @@ By default, handoff tools take no arguments. You can extend them to pass structu
 Specialists can have handoff tools to other specialists, not just back to the supervisor. This enables `technical_agent → billing_agent` direct transfers. It also enables loops, which is why most production setups restrict cross-handoff to a small whitelist.
 
 **5. Supervisor scope.** 
-A supervisor that only routes is the lean version. A supervisor that also does anti-fabrication checks, formatting normalization, and language enforcement is the fat version. Fat supervisors are easier to write rules for and harder to keep consistent. See [[04-common-pitfalls#4.2 Prompt rule accumulation]] for what happens when fat supervisors grow uncontrolled, and how to mitigate.
+A supervisor that only routes is the lean version. A supervisor that also does anti-fabrication checks, formatting normalization, and language enforcement is the fat version. Fat supervisors are easier to write rules for and harder to keep consistent. See [pitfall 4.2 (Prompt rule accumulation)](04-common-pitfalls.md#42-prompt-rule-accumulation) for what happens when fat supervisors grow uncontrolled, and how to mitigate.
 
 ## 2.5 What the framework gives you, and what it does not
 
