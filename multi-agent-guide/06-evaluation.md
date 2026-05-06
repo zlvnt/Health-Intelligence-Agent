@@ -32,8 +32,8 @@ Two principles for designing the set.
 
 **Tier cases by criticality.** Not every test case is worth the same weight. A four-tier system works:
 
-- **Tier 1 — critical paths.** The most common, highest-stakes user requests. If these fail, the system is broken. Examples: "log my breakfast", "create a plan for me". Should pass at high reliability (95%+).
-- **Tier 2 — common variations.** Requests that look similar to tier 1 but differ in language, phrasing, or completeness. Tests robustness. Examples: "i had toast" (no calorie data), "kasih plan diet" (different language). Should pass at acceptable reliability (80%+).
+- **Tier 1 — critical paths.** The most common, highest-stakes user requests. If these fail, the system is broken. Examples: "refund invoice INV-1042", "the API is returning 500s". Should pass at high reliability (95%+).
+- **Tier 2 — common variations.** Requests that look similar to tier 1 but differ in phrasing or completeness. Tests robustness. Examples: "my last bill was wrong" (no invoice ID), "site won't load" (vague technical signal). Should pass at acceptable reliability (80%+).
 - **Tier 3 — edge cases.** Specific failure modes you want to defend against. Ambiguous input, multi-intent messages, off-topic chatter, prompt injection. Lower pass rate is acceptable but failures should be understood.
 - **Tier 4 — known failures.** Cases the current system fails on. Tracked to confirm fixes don't regress, and to flag when behavior changes unexpectedly.
 
@@ -95,11 +95,11 @@ Compare actual tools called to expected tools. Same approach as routing: strict 
 
 The hardest of the five to measure mechanically. Two approaches.
 
-**Effect-based.** After the run, query the database (or whatever the side effect target is) and verify the expected change. Did `log_meal` actually persist? Did `create_ticket` produce a ticket ID? This is the most reliable signal but requires the test to run against a real or test database.
+**Effect-based.** After the run, query the database (or whatever the side effect target is) and verify the expected change. Did `refund_charge` actually persist? Did `create_ticket` produce a ticket ID? This is the most reliable signal but requires the test to run against a real or test database.
 
 **LLM-as-judge.** A separate LLM reads the test case and the agent's response, and scores whether the task appears to have been completed. Cheaper to set up; less reliable than effect-based.
 
-Use effect-based when feasible. Use judge as fallback for cases where the side effect is hard to verify (a plan was "generated" — what does that mean concretely?).
+Use effect-based when feasible. Use judge as fallback for cases where the side effect is hard to verify (a diagnosis was "produced" — what does that mean concretely?).
 
 ### Response quality
 

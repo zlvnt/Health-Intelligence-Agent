@@ -40,7 +40,7 @@ The deeper cause: the supervisor is being asked to enforce policy with natural-l
 
 **Mitigation.**
 
-Promote frequently-violated rules out of the prompt and into code. If the supervisor keeps routing to the wrong specialist for "log meal" requests, replace LLM routing for that intent with a keyword classifier. The supervisor becomes the fallback for ambiguous cases.
+Promote frequently-violated rules out of the prompt and into code. If the supervisor keeps routing to the wrong specialist for "refund" requests, replace LLM routing for that intent with a keyword classifier. The supervisor becomes the fallback for ambiguous cases.
 
 For rules that genuinely need to stay in the prompt, group them into named blocks and keep the count small. A flat list of fifteen rules is harder to follow than four blocks of three to four rules each.
 
@@ -50,7 +50,7 @@ For rules that genuinely need to stay in the prompt, group them into named block
 
 **Why it happens.** Multi-agent state is the conversation history. Specialists do not share a typed object — they share a stream of messages, and each one parses what it needs out of free-form text. Parsing is LLM inference, with all the variance that implies.
 
-A concrete pattern: the planning specialist's prompt says "base the plan on the assessment data." The model interprets this literally — assessment data means a structured summary from the assessment specialist. If the assessment ran but only persisted data via tool calls (no summary text), or if assessment was skipped entirely and the user provided the data directly in their message, the planner does not find what it expects and produces a generic template.
+A concrete pattern: the billing specialist's prompt says "use the ticket context from triage when processing the refund." The model interprets this literally — ticket context means a structured summary from the triage specialist. If triage ran but only persisted data via tool calls (no summary text), or if triage was skipped entirely and the user described the issue directly in their message, billing does not find what it expects and produces a generic "please provide your account details" reply.
 
 **Mitigation.**
 
@@ -58,46 +58,47 @@ Make state explicit. Persist user data through tools that write to a typed store
 
 ```python
 @tool
-def get_user_profile(user_id: int) -> dict:
-    """Return the user's stored profile: age, weight, goals, preferences."""
-    return db.fetch_profile(user_id)
+def get_customer_profile(customer_id: str) -> dict:
+    """Return the customer's stored profile: account tier, billing address, payment methods."""
+    return db.fetch_profile(customer_id)
 ```
 
-The planner now has a deterministic source of profile data. The conversation history is for conversation context, not for cross-agent communication.
+Billing now has a deterministic source of profile data. The conversation history is for conversation context, not for cross-agent communication.
 
 This shifts complexity from prompt engineering to schema design, which is the better tradeoff. Schema bugs are easier to debug than prompt-interpretation drift.
 
 ## 4.4 Anti-fabrication and over-step
 
-**What it looks like.** The supervisor, instead of routing to the assessment specialist, asks the user for their age and weight directly. The user replies. The supervisor then claims the data has been saved, even though no `collect_data` tool was ever called. The data exists nowhere.
+**What it looks like.** The supervisor, instead of routing to the triage specialist, asks the user for their account ID and issue description directly. The user replies. The supervisor then claims the ticket has been logged, even though no `collect_ticket_info` tool was ever called. The ticket exists nowhere.
 
-A related variant: the assessment specialist collects data and, instead of stopping, also generates a full plan that the planner specialist was supposed to produce. The plan is not stored through `create_plan` because the planner never ran.
+A related variant: the triage specialist collects the issue details and, instead of stopping, also issues a refund that the billing specialist was supposed to handle. The refund is not recorded through `refund_charge` because billing never ran.
 
-**Why it happens.** The supervisor and specialists are generative LLMs. They are trained to be helpful. When a user asks for a plan, the supervisor's model wants to provide one. If the next obvious step is "ask for age and weight", the model will ask, even though that is the assessment specialist's job. If the assessment specialist has data, the model will write a plan, even though the planner is supposed to.
+**Why it happens.** The supervisor and specialists are generative LLMs. They are trained to be helpful. When a user asks for a refund, the supervisor's model wants to help. If the next obvious step is "ask for account ID and invoice number", the model will ask, even though that is the triage specialist's job. If the triage specialist has the issue details, the model will issue the refund, even though billing is supposed to.
 
 **Mitigation.**
 
 Explicit anti-overstep rules in each prompt. The supervisor's rule:
 
 ```
-ANTI-OVERSTEP: Do not ask onboarding questions yourself (age, weight, goals,
-preferences). Route to the assessment specialist instead.
+ANTI-OVERSTEP: Do not ask intake questions yourself (account ID, issue type,
+contact details). Route to the triage specialist instead.
 ```
 
-The assessment specialist's rule:
+The triage specialist's rule:
 
 ```
-SCOPE: Your only job is to collect data via the collect_data tool and summarize
-what was collected. Do not generate plans, recommendations, or advice.
+SCOPE: Your only job is to collect ticket information via the collect_ticket_info
+tool and summarize what was collected. Do not issue refunds, take resolution
+actions, or escalate on your own.
 ```
 
 These rules work imperfectly. Different models follow them with different fidelity. The same prompt can produce conforming behavior on Haiku and over-stepping on a smaller model.
 
-A more durable defense: tool design. If the only way to "save" data is to call `collect_data`, and the specialist's prompt forbids replying without calling tools, the model has fewer paths to the over-step failure mode.
+A more durable defense: tool design. If the only way to "save" data is to call `collect_ticket_info`, and the specialist's prompt forbids replying without calling tools, the model has fewer paths to the over-step failure mode.
 
 ## 4.5 Tool-use reliability is model-dependent
 
-**What it looks like.** The supervisor decides correctly to route to a specialist — the reasoning trace shows "I should call transfer_to_assessment" — but no tool call is emitted. The supervisor replies with text instead. Or the assessment specialist correctly identifies four data points to save but only emits one `collect_data` call. The remaining three are mentioned in the response text but never persisted.
+**What it looks like.** The supervisor decides correctly to route to a specialist — the reasoning trace shows "I should call transfer_to_triage" — but no tool call is emitted. The supervisor replies with text instead. Or the triage specialist correctly identifies four ticket fields to save but only emits one `collect_ticket_info` call. The remaining three are mentioned in the response text but never persisted.
 
 **Why it happens.** Tool calling is a separate capability from text generation. Some models, especially smaller or older ones, have a noticeable gap between deciding to use a tool and actually emitting the structured tool call. Reasoning models can produce long chain-of-thought that concludes "I will call X" and then skip emission.
 
@@ -129,9 +130,9 @@ Prompt caching helps for the part of the cost that is fixed: the supervisor's sy
 
 **What it looks like.** A specialist's reply reads like a message to the end user — greeting, conversational tone, a question directed at the user. But the immediate reader of that reply is the supervisor (or another specialist), not the user. The supervisor either forwards verbatim and the user sees a reply that almost works, or worse, the supervisor reads the specialist's question as a question to *itself* and routes again, or wraps the reply in its own voice and double-greets the user.
 
-A concrete pattern: assessment specialist replies "Halo! Datamu sudah saya catat — umur 25, BB 70kg. Mau lanjut bikin plan?" The supervisor consumes this. Two failure modes are possible:
-- Supervisor treats "Mau lanjut bikin plan?" as the user's intent and routes to planning, producing a plan the user never asked for.
-- Supervisor's finalize step adds its own greeting on top: "Halo Ted! Datanya sudah tersimpan: umur 25, BB 70kg. Mau lanjut bikin plan?" — the user sees double-greeting and an offer for a step the supervisor decided unilaterally.
+A concrete pattern: triage specialist replies "Hi! I've logged your ticket — account ACC-1042, issue: payment failed on checkout. Want me to escalate to billing?" The supervisor consumes this. Two failure modes are possible:
+- Supervisor treats "Want me to escalate to billing?" as the user's intent and routes to billing, processing a refund the user never asked for.
+- Supervisor's finalize step adds its own greeting on top: "Hi! Your ticket is logged: account ACC-1042, payment failed on checkout. Want me to escalate to billing?" — the user sees double-greeting and an offer for a step the supervisor decided unilaterally.
 
 **Why it happens.** LLMs are trained on conversational data where the receiver is a human. Default reply style is human-facing: greeting, polite closing, offer of next steps. The specialist does not know its reply will be parsed by another LLM before reaching the user. There is no natural cue in the prompt or the runtime to make it write differently.
 
@@ -161,9 +162,9 @@ The coordinator will compose the user-facing message.
 
 ```python
 {
-  "user_message": "Data tersimpan: umur 25, BB 70kg.",
-  "internal_status": "data_collected",
-  "next_step_suggestion": "planning"
+  "user_message": "Ticket logged: account ACC-1042, payment failed on checkout.",
+  "internal_status": "triage_complete",
+  "next_step_suggestion": "billing"
 }
 ```
 
@@ -172,9 +173,9 @@ The supervisor consumes `internal_status` for routing decisions and forwards `us
 **Handoff payloads with explicit context.** When specialists hand off to each other directly (cross-specialist handoff in Section 2.4), pass structured payloads instead of relying on the receiver to parse the previous specialist's prose:
 
 ```python
-transfer_to_planning_agent(
-    profile={"age": 25, "weight": 70, "activity": "sedentary"},
-    goal="lose 5kg in 2 months",
+transfer_to_billing_agent(
+    customer={"id": "ACC-1042", "tier": "pro", "payment_method": "card_ending_4242"},
+    issue="payment failed on checkout, requesting refund",
 )
 ```
 

@@ -31,7 +31,7 @@ Before reaching for multi-agent, build the single-agent version mentally. A sing
 - A toolbox of functions the LLM can call (database queries, API calls, RAG lookups)
 - A loop: receive input, reason, optionally call tools, reply
 
-For most tasks this is enough. The model is competent at routing tool calls based on user intent — `log_meal` for "I ate a sandwich", `get_summary` for "how many calories today". The prompt holds the rules; the tools handle structured operations.
+For most tasks this is enough. The model is competent at routing tool calls based on user intent — `lookup_invoice` for "what's my last bill?", `check_service_status` for "is the API down?". The prompt holds the rules; the tools handle structured operations.
 
 The single-agent ceiling shows up in three places.
 
@@ -42,7 +42,7 @@ When a single prompt encodes multiple personas (assistant for X, expert for Y, a
 Selection accuracy degrades as the toolbox grows. Past 10–15 tools, models pick the wrong tool, especially when descriptions overlap. Smaller models hit this limit sooner.
 
 **3.Context contamination.** 
-A user logging meals asks a question about meal planning mid-conversation. The model carries logging context into the planning response and references calorie counts the user did not actually request.
+A user troubleshooting an API error asks a billing question mid-conversation. The model carries technical-debug context into the billing response and references error codes the user did not bring up.
 
 These ceilings are not theoretical. They appear in production logs once the assistant handles real conversations.
 
@@ -50,15 +50,15 @@ These ceilings are not theoretical. They appear in production logs once the assi
 
 Multi-agent breaks the single-agent prompt into focused units:
 
-- A meal-logging specialist. Its prompt knows nothing about planning. Tools: `log_meal`, `get_summary`, `get_history`.
-- A planner. Its prompt is about generating structured plans. Tools: `create_plan`.
+- A billing specialist. Its prompt knows nothing about technical issues. Tools: `lookup_invoice`, `refund_charge`, `update_payment_method`.
+- A technical specialist. Its prompt is about diagnosing service issues. Tools: `check_service_status`, `create_ticket`.
 - A coordinator (supervisor) that decides which specialist gets the request.
 
 Benefits map to the single-agent ceilings:
 
 - Smaller prompts per role — easier to debug, easier to constrain
 - Smaller tool subset per role — higher selection accuracy
-- Implicit context isolation — the planning agent does not see the meal-logging conversation, only the supervisor's handoff
+- Implicit context isolation — the technical agent does not see the billing conversation, only the supervisor's handoff
 
 This is not free.
 

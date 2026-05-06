@@ -5,7 +5,7 @@ The supervisor pattern has three components: a supervisor LLM, a set of speciali
 ## 2.1 Components
 
 **1. The supervisor.** 
-An LLM with a prompt describing the available specialists and their responsibilities. The supervisor does not call domain tools (no `log_meal`, no `create_plan`). It has exactly one kind of tool: handoff tools, one per specialist.
+An LLM with a prompt describing the available specialists and their responsibilities. The supervisor does not call domain tools (no `lookup_invoice`, no `refund_charge`). It has exactly one kind of tool: handoff tools, one per specialist.
 
 **2. Specialists.** 
 Agents with focused prompts and small tool sets. Each specialist is itself a ReAct agent, it can call tools, observe results, and reason in a loop until done. The specialist is unaware of the supervisor; it sees a request and responds.
@@ -71,7 +71,7 @@ This has consequences.
 The billing agent sees the supervisor's reasoning, prior specialists' outputs, and the user's full message. This is helpful for context and dangerous for prompt drift, the specialist may pick up tone or instructions from the supervisor's chatter.
 
 **2. Tool results stay visible.** 
-A specialist that ran `lookup_invoice` leaves the invoice data in state. The next specialist (or the supervisor) can read it. This is how implicit data sharing works across agents — and where it breaks down when prompts do not specify what to read.
+A specialist that ran `lookup_invoice` leaves the invoice data in state. The next specialist (or the supervisor) can read it. This is how implicit data sharing works across agents and where it breaks down when prompts do not specify what to read.
 
 **3. Output mode controls what flows back.** 
 LangGraph's `create_supervisor` accepts `output_mode="full_history"` (everything) or `output_mode="last_message"` (only the specialist's final reply). `last_message` is cheaper and reduces context contamination. `full_history` preserves trace for debugging and gives the supervisor more to reason about.
@@ -89,15 +89,20 @@ workflow = create_supervisor(
 
 The supervisor pattern has dimensions you can vary without leaving it.
 
-**Model per agent.** The supervisor and specialists do not need the same model. A common optimization: small fast model (Haiku, GPT-4o-mini) for the supervisor (routing is cheap reasoning), larger model for specialists (where the actual quality matters). This is called the *router-worker split*.
+**1. Model per agent.** 
+The supervisor and specialists do not need the same model. A common optimization: small fast model (Haiku, GPT-4o-mini) for the supervisor (routing is cheap reasoning), larger model for specialists (where the actual quality matters). This is called the *router-worker split*.
 
-**Synchronous vs streaming.** The graph can run synchronously (collect everything, return at the end) or stream tokens / events as they arrive. Streaming changes how you handle the supervisor's intermediate decisions in the UI.
+**2. Synchronous vs streaming.** 
+The graph can run synchronously (collect everything, return at the end) or stream tokens / events as they arrive. Streaming changes how you handle the supervisor's intermediate decisions in the UI.
 
-**Handoff payloads.** By default, handoff tools take no arguments. You can extend them to pass structured context (`transfer_to_billing_agent(reason="invoice_question", invoice_id=12345)`) so the specialist receives explicit hints rather than re-parsing the message history.
+**3. Handoff payloads.** 
+By default, handoff tools take no arguments. You can extend them to pass structured context (`transfer_to_billing_agent(reason="invoice_question", invoice_id=12345)`) so the specialist receives explicit hints rather than re-parsing the message history.
 
-**Cross-specialist handoff.** Specialists can have handoff tools to other specialists, not just back to the supervisor. This enables `tracking_agent → intervention_agent` direct transfers. It also enables loops, which is why most production setups restrict cross-handoff to a small whitelist.
+**4. Cross-specialist handoff.** 
+Specialists can have handoff tools to other specialists, not just back to the supervisor. This enables `technical_agent → billing_agent` direct transfers. It also enables loops, which is why most production setups restrict cross-handoff to a small whitelist.
 
-**Supervisor scope.** A supervisor that only routes is the lean version. A supervisor that also does anti-fabrication checks, formatting normalization, and language enforcement is the fat version. Fat supervisors are easier to write rules for and harder to keep consistent.
+**5. Supervisor scope.** 
+A supervisor that only routes is the lean version. A supervisor that also does anti-fabrication checks, formatting normalization, and language enforcement is the fat version. Fat supervisors are easier to write rules for and harder to keep consistent. See [[04-common-pitfalls#4.2 Prompt rule accumulation]] for what happens when fat supervisors grow uncontrolled, and how to mitigate.
 
 ## 2.5 What the framework gives you, and what it does not
 
