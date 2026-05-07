@@ -53,13 +53,15 @@ For rules that genuinely need to stay in the prompt, group them into named block
 
 ## 4.3 Implicit state via conversation history
 
-**What it looks like.** A specialist asks for information the user already provided. Or the specialist generates a generic output despite specific user data being present in the message history. Or two specialists disagree about a value because they parsed the same message differently.
+**1. What it looks like.** 
+A specialist asks for information the user already provided. Or the specialist generates a generic output despite specific user data being present in the message history. Or two specialists disagree about a value because they parsed the same message differently.
 
-**Why it happens.** Multi-agent state is the conversation history. Specialists do not share a typed object; they share a stream of messages, and each one parses what it needs out of free-form text. Parsing is LLM inference, with all the variance that implies.
+**2. Why it happens.** 
+Multi-agent state is the conversation history. Specialists do not share a typed object; they share a stream of messages, and each one parses what it needs out of free-form text. Parsing is LLM inference, with all the variance that implies.
 
-A concrete pattern: the billing specialist's prompt says "use the ticket context from triage when processing the refund." The model interprets this literally: ticket context means a structured summary from the triage specialist. If triage ran but only persisted data via tool calls (no summary text), or if triage was skipped entirely and the user described the issue directly in their message, billing does not find what it expects and produces a generic "please provide your account details" reply.
+A concrete pattern, assuming a third specialist `triage_agent` (an intake role that collects ticket context via `collect_ticket_info` before billing or technical takes action): the billing specialist's prompt says "use the ticket context from triage when processing the refund." The model interprets this literally: ticket context means a structured summary from the triage specialist. If triage ran but only persisted data via tool calls (no summary text), or if triage was skipped entirely and the user described the issue directly in their message, billing does not find what it expects and produces a generic "please provide your account details" reply.
 
-**Mitigation.**
+**3. Mitigation.**
 
 Make state explicit. Persist user data through tools that write to a typed store (database, structured file). Specialists read from the store via tools, not by parsing message history.
 
@@ -76,11 +78,13 @@ This shifts complexity from prompt engineering to schema design, which is the be
 
 ## 4.4 Anti-fabrication and over-step
 
-**What it looks like.** The supervisor, instead of routing to the triage specialist, asks the user for their account ID and issue description directly. The user replies. The supervisor then claims the ticket has been logged, even though no `collect_ticket_info` tool was ever called. The ticket exists nowhere.
+**1. What it looks like.** 
+The supervisor, instead of routing to the triage specialist, asks the user for their account ID and issue description directly. The user replies. The supervisor then claims the ticket has been logged, even though no `collect_ticket_info` tool was ever called. The ticket exists nowhere.
 
 A related variant: the triage specialist collects the issue details and, instead of stopping, also issues a refund that the billing specialist was supposed to handle. The refund is not recorded through `refund_charge` because billing never ran.
 
-**Why it happens.** The supervisor and specialists are generative LLMs. They are trained to be helpful. When a user asks for a refund, the supervisor's model wants to help. If the next obvious step is "ask for account ID and invoice number", the model will ask, even though that is the triage specialist's job. If the triage specialist has the issue details, the model will issue the refund, even though billing is supposed to.
+**2. Why it happens.** 
+The supervisor and specialists are generative LLMs. They are trained to be helpful. When a user asks for a refund, the supervisor's model wants to help. If the next obvious step is "ask for account ID and invoice number", the model will ask, even though that is the triage specialist's job. If the triage specialist has the issue details, the model will issue the refund, even though billing is supposed to.
 
 **Mitigation.**
 
@@ -105,11 +109,14 @@ A more durable defense: tool design. If the only way to "save" data is to call `
 
 ## 4.5 Tool-use reliability is model-dependent
 
-**What it looks like.** The supervisor decides correctly to route to a specialist (the reasoning trace shows "I should call transfer_to_triage") but no tool call is emitted. The supervisor replies with text instead. Or the triage specialist correctly identifies four ticket fields to save but only emits one `collect_ticket_info` call. The remaining three are mentioned in the response text but never persisted.
+**1. What it looks like.** 
+The supervisor decides correctly to route to a specialist (the reasoning trace shows "I should call transfer_to_triage") but no tool call is emitted. The supervisor replies with text instead. Or the triage specialist correctly identifies four ticket fields to save but only emits one `collect_ticket_info` call. The remaining three are mentioned in the response text but never persisted.
 
-**Why it happens.** Tool calling is a separate capability from text generation. Some models, especially smaller or older ones, have a noticeable gap between deciding to use a tool and actually emitting the structured tool call. Reasoning models can produce long chain-of-thought that concludes "I will call X" and then skip emission.
+**2. Why it happens.** 
+Tool calling is a separate capability from text generation. Some models, especially smaller or older ones, have a noticeable gap between deciding to use a tool and actually emitting the structured tool call. Reasoning models can produce long chain-of-thought that concludes "I will call X" and then skip emission.
 
-**Detection.** Compare the tool calls emitted to what the prompt and reasoning suggest should happen. Cross-model testing on the same prompt and input. If model A emits the tool call and model B does not, the issue is in the model, not the prompt.
+**3. Detection.** 
+Compare the tool calls emitted to what the prompt and reasoning suggest should happen. Cross-model testing on the same prompt and input. If model A emits the tool call and model B does not, the issue is in the model, not the prompt.
 
 **Mitigation.**
 
@@ -119,37 +126,47 @@ If the budget does not allow that, design tools so the model gets immediate feed
 
 ## 4.6 The supervisor's finalize step
 
-**What it looks like.** A turn that should be one routing decision and one specialist reply ends up with three or four LLM calls. The supervisor runs once to route, the specialist runs (possibly with multiple tool calls), and then the supervisor runs again to "finalize", wrapping or forwarding the specialist's reply. Sometimes the supervisor runs a third time after that.
+**1. What it looks like.** 
+A turn that should be one routing decision and one specialist reply ends up with three or four LLM calls. The supervisor runs once to route, the specialist runs (possibly with multiple tool calls), and then the supervisor runs again to "finalize", wrapping or forwarding the specialist's reply. Sometimes the supervisor runs a third time after that.
 
-**Why it happens.** This is how the supervisor pattern is wired. After a specialist completes, control returns to the supervisor. The supervisor's prompt includes routing logic, so it evaluates whether more routing is needed. Even a STOP rule still requires an LLM call to read the rule and decide to stop.
+**2. Why it happens.** 
+This is how the supervisor pattern is wired. After a specialist completes, control returns to the supervisor. The supervisor's prompt includes routing logic, so it evaluates whether more routing is needed. Even a STOP rule still requires an LLM call to read the rule and decide to stop.
 
-The cost is real: the finalize step typically runs a full prompt and produces a non-trivial output. For a supervisor running on the same model as the specialists, this is ~1× the specialist cost again.
+The cost is real, the finalize step typically runs a full prompt and produces a non-trivial output. For a supervisor running on the same model as the specialists, this is ~1× the specialist cost again.
 
-**Mitigation.**
+**3. Mitigation.**
 
-Use a smaller model for the supervisor. Routing is cheaper reasoning than content generation. A Haiku-class supervisor with a Sonnet-class specialist is a common production split.
+Use a smaller model for the supervisor. Routing is cheaper reasoning than content generation. A small/fast model for the supervisor paired with a larger model for the specialists is a common production split (the *router-worker split*).
 
 Some frameworks support skipping the finalize step entirely (return the specialist's reply directly). Check whether yours does. The tradeoff is losing the supervisor's ability to normalize formatting, enforce language rules, or catch anti-fabrication violations in the specialist's output.
 
-Prompt caching helps for the part of the cost that is fixed: the supervisor's system prompt and persistent context. Anthropic and OpenAI both offer caching. A 90% discount on the static portion of supervisor calls is meaningful when the supervisor runs twice per turn.
+Prompt caching helps for the part of the cost that is fixed: the supervisor's system prompt and persistent context. Major providers offer it (Anthropic, OpenAI, others), with discounts on the cached portion of subsequent calls. Meaningful when the supervisor runs twice per turn.
 
 ## 4.7 Audience ambiguity in specialist output
 
-**What it looks like.** A specialist's reply reads like a message to the end user, with greeting, conversational tone, and a question directed at the user. But the immediate reader of that reply is the supervisor (or another specialist), not the user. The supervisor either forwards verbatim and the user sees a reply that almost works, or worse, the supervisor reads the specialist's question as a question to *itself* and routes again, or wraps the reply in its own voice and double-greets the user.
+**1. What it looks like.** 
+A specialist's reply reads like a message to the end user, with greeting, conversational tone, and a question directed at the user. But the immediate reader of that reply is the supervisor (or another specialist), not the user. The supervisor either forwards verbatim and the user sees a reply that almost works, or worse, the supervisor reads the specialist's question as a question to *itself* and routes again, or wraps the reply in its own voice and double-greets the user.
 
 A concrete pattern: triage specialist replies "Hi! I've logged your ticket — account ACC-1042, issue: payment failed on checkout. Want me to escalate to billing?" The supervisor consumes this. Two failure modes are possible:
 - Supervisor treats "Want me to escalate to billing?" as the user's intent and routes to billing, processing a refund the user never asked for.
 - Supervisor's finalize step adds its own greeting on top: "Hi! Your ticket is logged: account ACC-1042, payment failed on checkout. Want me to escalate to billing?" The user sees double-greeting and an offer for a step the supervisor decided unilaterally.
 
-**Why it happens.** LLMs are trained on conversational data where the receiver is a human. Default reply style is human-facing: greeting, polite closing, offer of next steps. The specialist does not know its reply will be parsed by another LLM before reaching the user. There is no natural cue in the prompt or the runtime to make it write differently.
+**2. Why it happens.** 
+LLMs are trained on conversational data where the receiver is a human. Default reply style is human-facing: greeting, polite closing, offer of next steps. The specialist does not know its reply will be parsed by another LLM before reaching the user. There is no natural cue in the prompt or the runtime to make it write differently.
 
-**Detection.** Read specialist outputs and ask: "if the supervisor reads this verbatim, what does it think the user wants?" If the answer is ambiguous or wrong, the specialist is producing user-facing prose where structured status would serve better.
+**3. Detection.** 
+Read specialist outputs and ask: "if the supervisor reads this verbatim, what does it think the user wants?" If the answer is ambiguous or wrong, the specialist is producing user-facing prose where structured status would serve better.
 
-**Mitigation.** Four options, from lightest to heaviest.
+**4. Mitigation.** 
+Four options, from lightest to heaviest.
 
-**Limit context flow with `output_mode="last_message"`.** Reduces how much of the specialist's chatter the supervisor sees. Does not solve the problem (the last message is still user-facing prose) but reduces the surface area for misinterpretation.
+**4.1. Limit context flow with `output_mode="last_message"`.** 
+Reduces how much of the specialist's chatter the supervisor sees. Does not solve the problem (the last message is still user-facing prose) but reduces the surface area for misinterpretation.
 
-**Tell the specialist who its reader is.** Add to the specialist's prompt:
+**4.2. Tell the specialist who its reader is.** 
+Add to the specialist's prompt. Pick the variant that matches the specialist's role.
+
+For specialists whose reply goes directly to the user (e.g., billing or technical resolving a request):
 
 ```
 Your reply is forwarded directly to the end user by the supervisor. Reply concisely
@@ -157,7 +174,7 @@ to the user. Do not address the supervisor. Do not include greetings, sign-offs,
 offers of further help — those are added by other parts of the system.
 ```
 
-Or, if the specialist's reply is for the supervisor's consumption rather than the user's:
+For specialists whose reply is consumed by the supervisor for routing decisions (e.g., a triage step before an action specialist runs):
 
 ```
 Your reply is read by a coordinator agent, not the user. Output a brief structured
@@ -165,7 +182,8 @@ status: what was done, what data was collected, what (if anything) requires the 
 The coordinator will compose the user-facing message.
 ```
 
-**Two-tier output via structured response.** Specialist returns a structured object with separate user-facing and internal fields:
+**4.3. Two-tier output via structured response.** 
+Specialist returns a structured object with separate user-facing and internal fields:
 
 ```python
 {
@@ -177,15 +195,6 @@ The coordinator will compose the user-facing message.
 
 The supervisor consumes `internal_status` for routing decisions and forwards `user_message` to the user. Cleanly separates the two audiences. Requires framework support for structured output or a custom response parser.
 
-**Handoff payloads with explicit context.** When specialists hand off to each other directly (cross-specialist handoff in Section 2.4), pass structured payloads instead of relying on the receiver to parse the previous specialist's prose:
+**4.4 Handoff payloads with explicit context.** 
+For cross-specialist handoffs, pass structured payloads instead of relying on the receiver to parse prose. See [Section 2.4 #3 Handoff payloads](02-supervisor-pattern.md#24-variations) for the mechanics; it eliminates audience ambiguity at the seam where it most often breaks.
 
-```python
-transfer_to_billing_agent(
-    customer={"id": "ACC-1042", "tier": "pro", "payment_method": "card_ending_4242"},
-    issue="payment failed on checkout, requesting refund",
-)
-```
-
-The receiving specialist gets explicit data, not a conversational message it has to interpret. Eliminates the audience-ambiguity problem at the seam where it most often breaks.
-
-**The deeper point.** Multi-agent systems treat conversation history as the inter-agent communication channel. That channel was never designed for it; it was designed for human-LLM dialogue. Prompts and structured outputs are the patches. When patches stop scaling, the workload is signalling that prose-based agent communication has hit its limit, and structured protocols (function-call payloads, typed state objects) are the next move.
