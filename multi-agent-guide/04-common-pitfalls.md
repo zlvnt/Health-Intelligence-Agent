@@ -103,7 +103,7 @@ tool and summarize what was collected. Do not issue refunds, take resolution
 actions, or escalate on your own.
 ```
 
-These rules work imperfectly. Different models follow them with different fidelity. The same prompt can produce conforming behavior on Haiku and over-stepping on a smaller model.
+These rules work imperfectly. Different models follow them with different fidelity, so the same prompt can produce conforming behavior on a tool-reliable model and over-stepping on a smaller one.
 
 A more durable defense: tool design. If the only way to "save" data is to call `collect_ticket_info`, and the specialist's prompt forbids replying without calling tools, the model has fewer paths to the over-step failure mode.
 
@@ -116,11 +116,11 @@ The supervisor decides correctly to route to a specialist (the reasoning trace s
 Tool calling is a separate capability from text generation. Some models, especially smaller or older ones, have a noticeable gap between deciding to use a tool and actually emitting the structured tool call. Reasoning models can produce long chain-of-thought that concludes "I will call X" and then skip emission.
 
 **3. Detection.** 
-Compare the tool calls emitted to what the prompt and reasoning suggest should happen. Cross-model testing on the same prompt and input. If model A emits the tool call and model B does not, the issue is in the model, not the prompt.
+Compare the tool calls emitted to what the prompt and reasoning suggest should happen. Run cross-model tests on the same prompt and input: if model A emits the tool call and model B does not, the issue is in the model, not the prompt.
 
 **Mitigation.**
 
-If the budget allows, use a tool-reliable model for any agent whose value depends on tool emission. Anthropic's Claude family and OpenAI's GPT-4-class models are reliable in this dimension at the time of writing. Smaller models trade reliability for cost.
+If the budget allows, use a tool-reliable model for any agent whose value depends on tool emission. Frontier models from major providers (Anthropic, OpenAI, others) are reliable in this dimension at the time of writing; smaller models trade reliability for cost.
 
 If the budget does not allow that, design tools so the model gets immediate feedback when it skips. A `collect_data` tool that returns "data not saved" if called with empty arguments is more useful than one that silently accepts anything. The model's next reasoning step has something to react to.
 
@@ -140,7 +140,7 @@ Use a smaller model for the supervisor. Routing is cheaper reasoning than conten
 
 Some frameworks support skipping the finalize step entirely (return the specialist's reply directly). Check whether yours does. The tradeoff is losing the supervisor's ability to normalize formatting, enforce language rules, or catch anti-fabrication violations in the specialist's output.
 
-Prompt caching helps for the part of the cost that is fixed: the supervisor's system prompt and persistent context. Major providers offer it (Anthropic, OpenAI, others), with discounts on the cached portion of subsequent calls. Meaningful when the supervisor runs twice per turn.
+Prompt caching helps for the part of the cost that is fixed: the supervisor's system prompt and persistent context. Major providers offer it (Anthropic, OpenAI, others) with discounts on the cached portion of subsequent calls, which is meaningful when the supervisor runs twice per turn.
 
 ## 4.7 Audience ambiguity in specialist output
 

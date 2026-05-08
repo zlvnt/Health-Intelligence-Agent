@@ -21,7 +21,7 @@ User message
 
 Each specialist has its own prompt, its own subset of tools, and (sometimes) its own model. The supervisor sees the conversation history but does not invoke domain tools, its job is routing.
 
-Supervisor is one pattern among several. Plan-and-execute splits planning from execution. Hierarchical stacks supervisors of supervisors. Peer-to-peer skips the central coordinator entirely. This guide focuses on supervisor because it is the most common starting point and the one most multi-agent frameworks (LangGraph, CrewAI, AutoGen) put in the README example. For deeper coverage of the other patterns, see [appendix-patterns.md](appendix-patterns.md).
+Supervisor is one pattern among several: plan-and-execute splits planning from execution, hierarchical stacks supervisors of supervisors, peer-to-peer skips the central coordinator entirely. This guide focuses on supervisor because it is the most common starting point and the one most multi-agent frameworks (LangGraph, CrewAI, AutoGen) put in the README example. For deeper coverage of the other patterns, see [appendix-patterns.md](appendix-patterns.md).
 
 ## 1.1 The single-agent baseline
 
@@ -38,10 +38,10 @@ The single-agent ceiling shows up in three places.
 **1. Prompt overload.** 
 When a single prompt encodes multiple personas (assistant for X, expert for Y, advisor for Z), each with different tone, scope, and rules, the prompt grows long and the model becomes inconsistent. Rules conflict. New rules cause regressions in old behavior.
 
-**2.Tool selection error rate.** 
+**2. Tool selection error rate.** 
 Selection accuracy degrades as the toolbox grows. Past 10–15 tools, models pick the wrong tool, especially when descriptions overlap. Smaller models hit this limit sooner.
 
-**3.Context contamination.** 
+**3. Context contamination.** 
 A user troubleshooting an API error asks a billing question mid-conversation. The model carries technical-debug context into the billing response and references error codes the user did not bring up.
 
 These ceilings are not theoretical. They appear in production logs once the assistant handles real conversations.
@@ -64,7 +64,7 @@ This is not free.
 
 ## 1.3 The cost
 
-A multi-agent turn costs more than a single-agent turn. Usually 2–4× more LLM calls. Sometimes more.
+A multi-agent turn costs more than a single-agent turn, usually 2–4× more LLM calls and sometimes more.
 
 The breakdown for a typical turn:
 

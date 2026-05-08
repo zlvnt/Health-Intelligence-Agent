@@ -24,7 +24,7 @@ import os
 
 def make_llm():
     return ChatAnthropic(
-        model="claude-haiku-4-5-20251001",
+        model="<model-id>",  # specific model ID from your provider
         api_key=os.getenv("ANTHROPIC_API_KEY"),
         temperature=0.7,
     )
@@ -143,7 +143,7 @@ workflow = create_supervisor(
 graph = workflow.compile()
 ```
 
-`output_mode="last_message"` means only the specialist's final reply propagates back to the supervisor, not the full intermediate trace. Cheaper, less context noise. Use `full_history` only when debugging.
+`output_mode="last_message"` means only the specialist's final reply propagates back to the supervisor, not the full intermediate trace, which makes calls cheaper and reduces context noise. Use `full_history` only when debugging.
 
 ## 3.5 Invoking
 
@@ -207,7 +207,7 @@ You now have:
 
 You do not have:
 
-- Any guarantee the supervisor routes correctly. Routing accuracy on real traffic is typically 70–90% out of the box, depending on prompt and model.
+- Any guarantee the supervisor routes correctly. Routing accuracy on real traffic is typically well below 100% out of the box, depending on prompt and model.
 - Any handling of edge cases (ambiguous input, multi-intent messages, off-topic chatter, prompt injection attempts).
 - Loop prevention. The setup above will happily run a `supervisor → A → supervisor → A → ...` cycle until something breaks.
 - Tool-use discipline. Some models call tools reliably; others reason about calling them and then skip the actual call. There is no framework-level fix for this.

@@ -57,13 +57,13 @@ A turn proceeds in steps. Trace through what happens for a billing question.
 7. Specialist's final message routes back to the supervisor.
 8. Supervisor LLM call again. It decides whether to forward, route to another specialist, or stop.
 
-That is three to four LLM calls for one turn. Two for the supervisor (steps 2 and 8), one or more for the specialist depending on how many tools it chains.
+That is three to four LLM calls for one turn: two for the supervisor (steps 2 and 8), one or more for the specialist depending on how many tools it chains.
 
 The pattern looks simple in the diagram. The actual flow is a state machine with the supervisor running before and after every specialist invocation.
 
 ## 2.3 State
 
-State is the conversation history plus any framework-managed metadata. By default, every message like user input, supervisor decisions, tool calls, tool results, specialist replies, accumulates into a single list and gets passed to whichever agent runs next.
+State is the conversation history plus any framework-managed metadata. By default, every message (user input, supervisor decisions, tool calls, tool results, specialist replies) accumulates into a single list and gets passed to whichever agent runs next.
 
 This has consequences.
 
@@ -90,7 +90,7 @@ workflow = create_supervisor(
 The supervisor pattern has dimensions you can vary without leaving it.
 
 **1. Model per agent.** 
-The supervisor and specialists do not need the same model. A common optimization: small fast model (Haiku, GPT-4o-mini) for the supervisor (routing is cheap reasoning), larger model for specialists (where the actual quality matters). This is called the *router-worker split*.
+The supervisor and specialists do not need the same model. A common optimization: a small fast model for the supervisor (routing is cheap reasoning), a larger model for specialists (where the actual quality matters). This is called the *router-worker split*.
 
 **2. Synchronous vs streaming.** 
 The graph can run synchronously (collect everything, return at the end) or stream tokens / events as they arrive. Streaming changes how you handle the supervisor's intermediate decisions in the UI.
@@ -113,4 +113,4 @@ Frameworks like LangGraph provide the state machine, the handoff tool generation
 - Failure modes (loops, routing errors, state misreads)
 - Evaluation
 
-A framework will let you stand up a supervisor in twenty lines. The remaining ninety percent of the work is what the next sections cover.
+A framework will let you stand up a supervisor in twenty lines. The rest is what the next sections cover.
